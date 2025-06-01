@@ -106,7 +106,7 @@ class MainWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def updateFileList(self):
-        self.file_list = os.listdir("../input")
+        self.file_list = os.listdir("input")
 
 # -------------------------------------------------------------------------
 # Выбор следующего файла
@@ -155,7 +155,7 @@ class MainWindow(QWidget):
             for c in self.classes:
                 self.objects_count[c] = 0
 
-            self.image = cv2.imread("../input/" + self.file_name)
+            self.image = cv2.imread("input/" + self.file_name)
             self.image = cv2.resize(self.image, (self.image_width, self.image_height))
             cv2.namedWindow("Image")
             cv2.setMouseCallback("Image", self.callback)
@@ -349,12 +349,12 @@ class MainWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def generateLable(self):
-        with open("../output/" + self.file_name[0:-4] + ".txt", "w") as f:
+        with open("output/" + self.file_name[0:-4] + ".txt", "w") as f:
             for key, value in self.segmented_objects.items():
                 for i in range(len(self.classes)):
                     if self.classes[i] in key:
                         line = self.create_yolo_line_from_mask(i, value, self.image_width, self.image_height)
                         f.write(line + "\n")
-        with open('../test.npy', 'wb') as f:
-            np.save(f, self.mask_uint8)
+        # with open('../test.npy', 'wb') as f:
+        #     np.save(f, self.mask_uint8)
         print(self.file_name[0:-4] + " Coplite!")

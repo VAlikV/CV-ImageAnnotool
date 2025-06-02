@@ -10,7 +10,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.classes = ["Connector", "Conts"]
+        self.classes = ["BlueConnector", "Potentiometer", "CapacitorSMD", "Coil"]
         self.current_class = self.classes[0]
         self.current_file_index = -1
         self.file_list = []

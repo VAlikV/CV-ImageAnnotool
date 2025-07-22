@@ -1,12 +1,10 @@
-
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox
-from widgets.sam import SAM
 from widgets.sam2 import SAM2
 import os
 import cv2
 import numpy as np
 
-class MainWindow(QWidget):
+class SegmentWindow(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -192,34 +190,41 @@ class MainWindow(QWidget):
                 self.zoom /= 1.1
                 self.zoom = max(self.zoom, self.min_zoom)
 
-            img = self.image.copy()
-
             # Calculate zoomed-in image size
-            self.new_width = round(img.shape[1] / self.zoom)
-            self.new_height = round(img.shape[0] / self.zoom)
+            self.new_width = round(self.image.shape[1] / self.zoom)
+            self.new_height = round(self.image.shape[0] / self.zoom)
 
             # Calculate offset
             self.x_offset = round(x - (x / self.zoom))
             self.y_offset = round(y - (y / self.zoom))
 
-            # Crop image
-            img = img[
+            self.printImage()
+
+# -------------------------------------------------------------------------
+# Отрисовка окна  
+# -------------------------------------------------------------------------
+
+    def printImage(self):
+        img = self.image.copy()
+
+        # Crop image
+        img = img[
+            self.y_offset : self.y_offset + self.new_height,
+            self.x_offset : self.x_offset + self.new_width,
+        ]
+
+        if cv2.getWindowProperty('Mask', cv2.WND_PROP_VISIBLE) >= 1:
+            img2 = self.overlay.copy()
+            img2 = img2[
                 self.y_offset : self.y_offset + self.new_height,
                 self.x_offset : self.x_offset + self.new_width,
             ]
+            img2 = cv2.resize(img2, (self.image.shape[1], self.image.shape[0]))
+            cv2.imshow("Mask", img2)
 
-            if cv2.getWindowProperty('Mask', cv2.WND_PROP_VISIBLE) >= 1:
-                img2 = self.overlay.copy()
-                img2 = img2[
-                    self.y_offset : self.y_offset + self.new_height,
-                    self.x_offset : self.x_offset + self.new_width,
-                ]
-                img2 = cv2.resize(img2, (self.image.shape[1], self.image.shape[0]))
-                cv2.imshow("Mask", img2)
-
-            # Stretch image to full size
-            img = cv2.resize(img, (self.image.shape[1], self.image.shape[0]))
-            cv2.imshow("Image", img)
+        # Stretch image to full size
+        img = cv2.resize(img, (self.image.shape[1], self.image.shape[0]))
+        cv2.imshow("Image", img)
 
 # -------------------------------------------------------------------------
 # Прямой проход по sam  
@@ -357,4 +362,4 @@ class MainWindow(QWidget):
                         f.write(line + "\n")
         # with open('../test.npy', 'wb') as f:
         #     np.save(f, self.mask_uint8)
-        print(self.file_name[0:-4] + " Coplite!")
+        print(self.file_name[0:-4] + " Coplete!")

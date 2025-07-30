@@ -8,7 +8,7 @@ class SegmentWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.classes = ["BlueConnector", "Potentiometer", "CapacitorSMD", "Coil"]
+        self.classes = ["Connector"]
         self.current_class = self.classes[0]
         self.current_file_index = -1
         self.file_list = []
@@ -29,7 +29,7 @@ class SegmentWindow(QWidget):
         self.max_zoom = 10
         self.x_offset, self.y_offset = 0, 0
 
-        self.image_height, self.image_width = 480, 640
+        self.image_height, self.image_width = 1216, 1600
         self.new_height, self.new_width = self.image_height, self.image_width
 
         self.model = SAM2()

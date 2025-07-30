@@ -123,6 +123,7 @@ class DirectionWindow(QWidget):
 
     def openFile(self):
         if self.file_name[len(self.file_name)-3:len(self.file_name)] == "jpg" or self.file_name[len(self.file_name)-3:len(self.file_name)] == "png":
+            self.stage = 0
 
             self.image = cv2.imread("input/" + self.file_name)
             self.image = cv2.resize(self.image, (self.image_width, self.image_height))

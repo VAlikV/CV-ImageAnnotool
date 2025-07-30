@@ -1,69 +1,43 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox, QCheckBox, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox
 from widgets.sam2 import SAM2
 import os
 import cv2
 import numpy as np
 
 class SegmentWindow(QWidget):
-    def __init__(self, image_height = 1216, image_width = 1600):
+    def __init__(self):
         super().__init__()
 
         self.classes = ["Connector"]
         self.current_class = self.classes[0]
-        self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
         self.file_list = []
 
-        colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
-        # self.colors = np.random.uniform(0, 256, (len(self.classes),3))
+        # self.colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255))
+        self.color = [0,0,255]
+        # np.random.uniform(0, 256, 3)
 
-        self.classes_color = {}
-        for i, c in enumerate(self.classes):
-            self.classes_color[c] = colors[i]
-        
-        self.color = self.classes_color[self.current_class]
-
+        self.segmented_objects = {}
         self.objects_count = {}
+        self.masks = []
+
         for c in self.classes:
             self.objects_count[c] = 0
-
-        self.objects = {}
-        self.current_object = {}
 
         self.zoom = 1
         self.min_zoom = 1
         self.max_zoom = 10
         self.x_offset, self.y_offset = 0, 0
 
-        if image_height >= 1000:
-            self.mult = 2
-        else:
-            self.mult = 1
-
-        self.source_height, self.source_width = image_height, image_width       # Нужный размер
-        self.image_height, self.image_width = image_height//self.mult, image_width//self.mult   # Уменьшенный размер
-        self.new_height, self.new_width = image_height//self.mult, image_width//self.mult       # Уменьшенный размер + зум
+        self.image_height, self.image_width = 1216, 1600
+        self.new_height, self.new_width = self.image_height, self.image_width
 
         self.model = SAM2()
         self.points = []
         self.labels = []
 
-        self.draw = False
-
-        self.left_flag = False
-        self.right_flag = False
-
         # =======================================================
         
-        self.setLayoutSetup()
-        self.setConnectoins()
-        self.updateFileList()
-    
-# -------------------------------------------------------------------------
-# Настройка окна
-# -------------------------------------------------------------------------
-
-    def setLayoutSetup(self):
         self.setWindowTitle("Dataset Prepare by 431Group")
 
         # =======================================================
@@ -80,26 +54,10 @@ class SegmentWindow(QWidget):
         # =======================================================
 
         self.combobox_classes = QComboBox()
-        self.combobox_classes.setFixedWidth(120)
         self.combobox_classes.addItems(self.classes)
         self.middle_layout = QHBoxLayout()
         self.middle_layout.addWidget(QLabel("Class: "))
         self.middle_layout.addWidget(self.combobox_classes)
-        self.middle_layout.addStretch(1)
-
-        # =======================================================
-
-        self.draw_check_box = QCheckBox()
-        self.draw_size = QLineEdit()
-        self.draw_size.setText("5")
-        self.draw_size.setFixedWidth(25)
-        self.draw_size.setInputMask("99")
-        self.draw_layout = QHBoxLayout()
-        self.draw_layout.addWidget(QLabel("Draw: "))
-        self.draw_layout.addWidget(self.draw_check_box)
-        self.draw_layout.addWidget(QLabel("Size: "))
-        self.draw_layout.addWidget(self.draw_size)
-        self.draw_layout.addStretch(1)
 
         # =======================================================
 
@@ -116,24 +74,29 @@ class SegmentWindow(QWidget):
         self.main_layout = QVBoxLayout()
         self.main_layout.addLayout(self.up_layout)
         self.main_layout.addLayout(self.middle_layout)
-        self.main_layout.addLayout(self.draw_layout)
         self.main_layout.addLayout(self.down_layout)     
 
         self.setLayout(self.main_layout)
 
         # =======================================================
 
-# -------------------------------------------------------------------------
-# Подключение сигналов
+        self.setConnectoins()
+
+        # =======================================================
+
+        self.updateFileList()
+        # self.file_name = self.file_list[0]
+        # self.file_name_line.setText(self.file_name)
+    
 # -------------------------------------------------------------------------
 
     def setConnectoins(self):
         self.next_button.clicked.connect(self.selectNextFile)
         self.prev_button.clicked.connect(self.selectPrevFile)
-
+        # self.ok_button.clicked.connect(self.openFile)
+        # self.combobox_classes.changeEvent(self.selectNewClass)
         self.combobox_classes.currentIndexChanged.connect(self.selectNewClass)
         self.ok_button.clicked.connect(self.completeObject)
-        self.cancel_button.clicked.connect(self.cancelObject)
         self.generate_button.clicked.connect(self.generateLable)
 
 # -------------------------------------------------------------------------
@@ -156,7 +119,8 @@ class SegmentWindow(QWidget):
             self.current_file_index = 0
             self.file_name = self.file_list[self.current_file_index]
             self.file_name_line.setText(self.file_name)
-
+        self.zoom = 1
+        self.x_offset, self.y_offset = 0, 0
         self.openFile()
 
 # -------------------------------------------------------------------------
@@ -172,7 +136,8 @@ class SegmentWindow(QWidget):
             self.current_file_index = len(self.file_list) - 1
             self.file_name = self.file_list[self.current_file_index]
             self.file_name_line.setText(self.file_name)
-        
+        self.zoom = 1
+        self.x_offset, self.y_offset = 0, 0
         self.openFile()
 
 # -------------------------------------------------------------------------
@@ -180,40 +145,21 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def openFile(self):
-        self.zoom = 1
-        self.x_offset, self.y_offset = 0, 0
-
         if self.file_name[len(self.file_name)-3:len(self.file_name)] == "jpg" or self.file_name[len(self.file_name)-3:len(self.file_name)] == "png":
+            self.segmented_objects = {}
             self.objects_count = {}
+            self.masks = []
+
             for c in self.classes:
                 self.objects_count[c] = 0
 
-            self.objects = {}
-            self.current_object = {}
-
-            self.source_image = cv2.imread("input/" + self.file_name)
-            self.source_image = cv2.resize(self.source_image, (self.source_width, self.source_height))
-            
-            self.resized_image = cv2.resize(self.source_image, (self.image_width, self.image_height))
-            self.masked_image = self.resized_image.copy()
-
+            self.image = cv2.imread("input/" + self.file_name)
+            self.image = cv2.resize(self.image, (self.image_width, self.image_height))
             cv2.namedWindow("Image")
             cv2.setMouseCallback("Image", self.callback)
-            cv2.imshow("Image", self.masked_image)
+            cv2.imshow("Image", self.image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-
-# -------------------------------------------------------------------------
-# Выбор нового класса  
-# -------------------------------------------------------------------------
-
-    def selectNewClass(self):
-        if not (self.combobox_classes.currentText() == self.current_class):
-            # self.completeObject()
-            self.current_class = self.combobox_classes.currentText()
-            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
-            self.color = self.classes_color[self.current_class]
-            print("Selected: ", self.current_object_name)
 
 # -------------------------------------------------------------------------
 # Обработка колесика мыши и нажатия левой кнопки мыши 
@@ -226,35 +172,15 @@ class SegmentWindow(QWidget):
 
         if event == cv2.EVENT_LBUTTONDOWN:
             # print("x: ", x, "y: ", y)
-            self.left_flag = True
-            if self.draw_check_box.checkState():
-                print("draw")
-            else:
-                # print("seg")
-                self.points.append([x*self.mult,y*self.mult])
-                self.labels.append(1)
-                self.segmentation()
-
-        if event == cv2.EVENT_LBUTTONUP:
-            self.left_flag = False
+            self.points.append([x,y])
+            self.labels.append(1)
+            self.segmentation()
         
         if event == cv2.EVENT_RBUTTONDOWN:
             # print("x: ", x, "y: ", y)
-            self.right_flag = True
-            if self.draw_check_box.checkState():
-                print("draw")
-            else:
-                # print("seg")
-                self.points.append([x*self.mult,y*self.mult])
-                self.labels.append(0)
-                self.segmentation()
-
-        if event == cv2.EVENT_RBUTTONUP:
-            self.right_flag = False
-
-        if (self.left_flag or self.right_flag) and (event == cv2.EVENT_MOUSEMOVE):
-            # print("x: ", x, "y: ", y)
-            pass
+            self.points.append([x,y])
+            self.labels.append(0)
+            self.segmentation()
 
         if event == cv2.EVENT_MOUSEWHEEL:
             if flags > 0:
@@ -265,8 +191,8 @@ class SegmentWindow(QWidget):
                 self.zoom = max(self.zoom, self.min_zoom)
 
             # Calculate zoomed-in image size
-            self.new_width = round(self.masked_image.shape[1] / self.zoom)
-            self.new_height = round(self.masked_image.shape[0] / self.zoom)
+            self.new_width = round(self.image.shape[1] / self.zoom)
+            self.new_height = round(self.image.shape[0] / self.zoom)
 
             # Calculate offset
             self.x_offset = round(x - (x / self.zoom))
@@ -279,7 +205,7 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def printImage(self):
-        img = self.masked_image.copy()
+        img = self.image.copy()
 
         # Crop image
         img = img[
@@ -287,8 +213,17 @@ class SegmentWindow(QWidget):
             self.x_offset : self.x_offset + self.new_width,
         ]
 
+        if cv2.getWindowProperty('Mask', cv2.WND_PROP_VISIBLE) >= 1:
+            img2 = self.overlay.copy()
+            img2 = img2[
+                self.y_offset : self.y_offset + self.new_height,
+                self.x_offset : self.x_offset + self.new_width,
+            ]
+            img2 = cv2.resize(img2, (self.image.shape[1], self.image.shape[0]))
+            cv2.imshow("Mask", img2)
+
         # Stretch image to full size
-        img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
+        img = cv2.resize(img, (self.image.shape[1], self.image.shape[0]))
         cv2.imshow("Image", img)
 
 # -------------------------------------------------------------------------
@@ -296,54 +231,43 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def segmentation(self):
-        masks = self.model.forward(self.source_image, [self.points], [self.labels])
+        masks = self.model.forward(self.image, [self.points], [self.labels])
 
         mask = masks[2]  # [batch, point, num_masks, H, W] → [H, W]
 
-        self.current_object["mask_uint8"] = mask.astype(np.uint8)
+        self.mask_uint8 = mask.astype(np.uint8)
 
-        self.current_object["mask"] = np.zeros((*self.current_object["mask_uint8"].shape, 3), dtype=np.uint8)  # shape: (H, W, 3)
+        self.current_mask = np.zeros((*self.mask_uint8.shape, 3), dtype=np.uint8)  # shape: (H, W, 3)
 
         # Установим цвет для пикселей, где mask == 1
-        self.current_object["mask"][self.current_object["mask_uint8"] == 1] = self.color  # BGR
+        self.current_mask[self.mask_uint8 == 1] = self.color  # BGR
 
         self.printMasks()
-
-# -------------------------------------------------------------------------
-# Рисование  
-# -------------------------------------------------------------------------
-
-    def draw(self):
-        print("AAA")
 
 # -------------------------------------------------------------------------
 # Отрисовка маски 
 # -------------------------------------------------------------------------
 
     def printMasks(self):
-        self.masked_image = self.resized_image.copy()
+        image_c = np.array(self.image)
 
-        if len(self.current_object.keys()) > 0:
-            mask = cv2.resize(self.current_object["mask"], (self.image_width, self.image_height))
-            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.75, 0)
+        self.overlay = cv2.addWeighted(image_c, 1.0, self.current_mask, 0.75, 0)
 
-        for obj in self.objects.keys():
-            mask = cv2.resize(self.objects[obj]["mask"], (self.image_width, self.image_height))
-            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.75, 0)
+        for m in self.masks:
+            self.overlay = cv2.addWeighted(self.overlay, 1.0, m, 0.75, 0)
 
-        if len(self.current_object.keys()) > 0:
-            bbox = self.getBoundingBox()
-            self.masked_image = cv2.rectangle(self.masked_image, (bbox[0], bbox[1]), (bbox[2],bbox[3]), self.color, 1)
+        bbox = self.getBoundingBox()
+        self.overlay = cv2.rectangle(self.overlay, (bbox[0], bbox[1]), (bbox[2],bbox[3]), self.color, 1)
 
-        img = self.masked_image.copy()
-        img = img[
+        img2 = self.overlay.copy()
+        img2 = img2[
             self.y_offset : self.y_offset + self.new_height,
             self.x_offset : self.x_offset + self.new_width,
         ]
 
-        img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
+        img2 = cv2.resize(img2, (self.image.shape[1], self.image.shape[0]))
 
-        cv2.imshow("Image", img)
+        cv2.imshow("Mask", img2)
 
 # -------------------------------------------------------------------------
 # Генерация бокса
@@ -351,9 +275,8 @@ class SegmentWindow(QWidget):
     
     def getBoundingBox(self):
         
-        # if not (self.mask_uint8 == None):
         # Находим координаты ненулевых пикселей (где mask == 1)
-        ys, xs = np.where(self.current_object["mask_uint8"] > 0)
+        ys, xs = np.where(self.mask_uint8 > 0)
 
         # Проверка на случай, если маска пустая
         if len(xs) == 0 or len(ys) == 0:
@@ -363,35 +286,30 @@ class SegmentWindow(QWidget):
             y_min, y_max = ys.min(), ys.max()
 
             # Bounding box: (x_min, y_min) — левый верхний угол, (x_max, y_max) — правый нижний
-            bbox = (x_min//self.mult, y_min//self.mult, x_max//self.mult, y_max//self.mult)
+            bbox = (x_min, y_min, x_max, y_max)
             return bbox
+
+# -------------------------------------------------------------------------
+# Выбор нового класса  
+# -------------------------------------------------------------------------
+
+    def selectNewClass(self):
+        if not (self.combobox_classes.currentText() == self.current_class):
+            # self.completeObject()
+            self.current_class = self.combobox_classes.currentText()
+            self.color = np.random.uniform(0, 256, 3)
 
 # -------------------------------------------------------------------------
 # Завершение сегентации объекта 
 # -------------------------------------------------------------------------
 
     def completeObject(self):
-        self.objects[self.current_object_name] = {}
-        self.objects[self.current_object_name]["mask_uint8"] = self.current_object["mask_uint8"]
-        self.objects[self.current_object_name]["mask"] = self.current_object["mask"]
+        self.segmented_objects[self.current_class+"_"+str(self.objects_count[self.current_class])] = self.mask_uint8
         self.objects_count[self.current_class] += 1
         self.points = []
         self.labels = []
-        self.current_object = {}
-        print("Add ", self.current_object_name)
-        self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
-
-# -------------------------------------------------------------------------
-# Отмена сегентации объекта 
-# -------------------------------------------------------------------------
-
-    def cancelObject(self):
-        self.current_object = {}
-        self.points = []
-        self.labels = []
-        print("Cancel")
-
-        self.printMasks()
+        self.masks.append(self.current_mask)
+        print(self.segmented_objects.keys())
 
 # -------------------------------------------------------------------------
 # Формирование контура
@@ -437,10 +355,10 @@ class SegmentWindow(QWidget):
 
     def generateLable(self):
         with open("output/" + self.file_name[0:-4] + ".txt", "w") as f:
-            for key in self.objects.keys():
+            for key, value in self.segmented_objects.items():
                 for i in range(len(self.classes)):
                     if self.classes[i] in key:
-                        line = self.create_yolo_line_from_mask(i, self.objects[key]['mask_uint8'], self.source_width, self.source_height)
+                        line = self.create_yolo_line_from_mask(i, value, self.image_width, self.image_height)
                         f.write(line + "\n")
         # with open('../test.npy', 'wb') as f:
         #     np.save(f, self.mask_uint8)

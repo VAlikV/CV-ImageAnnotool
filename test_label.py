@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 
 # Путь к файлам
-image_path = 'input/2.png'
-label_path = 'output/2.txt'
+image_path = 'input/1.png'
+label_path = 'output/1.txt'
 
 # Загрузка изображения
 image = cv2.imread(image_path)

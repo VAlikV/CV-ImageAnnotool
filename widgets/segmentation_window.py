@@ -49,9 +49,10 @@ class SegmentWindow(QWidget):
         self.labels = []
 
         self.draw = False
-
         self.left_flag = False
         self.right_flag = False
+        self.draw_count = 0
+        self.draw_size = 5
 
         # =======================================================
         
@@ -90,15 +91,15 @@ class SegmentWindow(QWidget):
         # =======================================================
 
         self.draw_check_box = QCheckBox()
-        self.draw_size = QLineEdit()
-        self.draw_size.setText("5")
-        self.draw_size.setFixedWidth(25)
-        self.draw_size.setInputMask("99")
+        self.draw_size_edit = QLineEdit()
+        self.draw_size_edit.setText("5")
+        self.draw_size_edit.setFixedWidth(25)
+        self.draw_size_edit.setInputMask("99")
         self.draw_layout = QHBoxLayout()
         self.draw_layout.addWidget(QLabel("Draw: "))
         self.draw_layout.addWidget(self.draw_check_box)
         self.draw_layout.addWidget(QLabel("Size: "))
-        self.draw_layout.addWidget(self.draw_size)
+        self.draw_layout.addWidget(self.draw_size_edit)
         self.draw_layout.addStretch(1)
 
         # =======================================================
@@ -135,6 +136,8 @@ class SegmentWindow(QWidget):
         self.ok_button.clicked.connect(self.completeObject)
         self.cancel_button.clicked.connect(self.cancelObject)
         self.generate_button.clicked.connect(self.generateLable)
+
+        self.draw_size_edit.textChanged.connect(self.setDrawSize)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
@@ -219,6 +222,13 @@ class SegmentWindow(QWidget):
 # Обработка колесика мыши и нажатия левой кнопки мыши 
 # -------------------------------------------------------------------------
 
+    def setDrawSize(self):
+        self.draw_size = int(self.draw_size_edit.text())
+
+# -------------------------------------------------------------------------
+# Обработка колесика мыши и нажатия левой кнопки мыши 
+# -------------------------------------------------------------------------
+
     def callback(self, event, x, y, flags, param):
 
         x = round(x / self.zoom) + self.x_offset
@@ -228,7 +238,8 @@ class SegmentWindow(QWidget):
             # print("x: ", x, "y: ", y)
             self.left_flag = True
             if self.draw_check_box.checkState():
-                print("draw")
+                self.drawMask([x*self.mult, y*self.mult])
+                self.draw_count = 0
             else:
                 # print("seg")
                 self.points.append([x*self.mult,y*self.mult])
@@ -242,7 +253,8 @@ class SegmentWindow(QWidget):
             # print("x: ", x, "y: ", y)
             self.right_flag = True
             if self.draw_check_box.checkState():
-                print("draw")
+                self.drawMask([x*self.mult, y*self.mult])
+                self.draw_count = 0
             else:
                 # print("seg")
                 self.points.append([x*self.mult,y*self.mult])
@@ -253,8 +265,10 @@ class SegmentWindow(QWidget):
             self.right_flag = False
 
         if (self.left_flag or self.right_flag) and (event == cv2.EVENT_MOUSEMOVE):
-            # print("x: ", x, "y: ", y)
-            pass
+            if self.draw_count >= 5:
+                self.drawMask([x*self.mult, y*self.mult])
+                self.draw_count = 0
+            self.draw_count += 1
 
         if event == cv2.EVENT_MOUSEWHEEL:
             if flags > 0:
@@ -300,12 +314,13 @@ class SegmentWindow(QWidget):
 
         mask = masks[2]  # [batch, point, num_masks, H, W] → [H, W]
 
-        self.current_object["mask_uint8"] = mask.astype(np.uint8)
+        # self.current_object["mask_uint8"] = mask.astype(np.uint8)
+        mask8 = mask.astype(np.uint8)
 
-        self.current_object["mask"] = np.zeros((*self.current_object["mask_uint8"].shape, 3), dtype=np.uint8)  # shape: (H, W, 3)
+        self.current_object["mask"] = np.zeros((*mask8.shape, 3), dtype=np.uint8)  # shape: (H, W, 3)
 
         # Установим цвет для пикселей, где mask == 1
-        self.current_object["mask"][self.current_object["mask_uint8"] == 1] = self.color  # BGR
+        self.current_object["mask"][mask8 == 1] = self.color  # BGR
 
         self.printMasks()
 
@@ -313,8 +328,17 @@ class SegmentWindow(QWidget):
 # Рисование  
 # -------------------------------------------------------------------------
 
-    def draw(self):
-        print("AAA")
+    def drawMask(self, point):
+        if len(self.current_object.keys()) == 0:
+            self.current_object["mask"] = np.zeros_like(self.source_image)
+
+        if self.left_flag:
+            self.current_object["mask"] = cv2.circle(self.current_object["mask"], point, self.draw_size, self.color, self.draw_size*2)
+
+        if self.right_flag:
+            self.current_object["mask"] = cv2.circle(self.current_object["mask"], point, self.draw_size, (0,0,0), self.draw_size*2)
+        
+        self.printMasks()
 
 # -------------------------------------------------------------------------
 # Отрисовка маски 
@@ -353,7 +377,10 @@ class SegmentWindow(QWidget):
         
         # if not (self.mask_uint8 == None):
         # Находим координаты ненулевых пикселей (где mask == 1)
-        ys, xs = np.where(self.current_object["mask_uint8"] > 0)
+
+        mask8 = np.any(self.current_object["mask"] != 0, axis=-1).astype(np.uint8)
+
+        ys, xs = np.where(mask8 > 0)
 
         # Проверка на случай, если маска пустая
         if len(xs) == 0 or len(ys) == 0:
@@ -372,7 +399,7 @@ class SegmentWindow(QWidget):
 
     def completeObject(self):
         self.objects[self.current_object_name] = {}
-        self.objects[self.current_object_name]["mask_uint8"] = self.current_object["mask_uint8"]
+        # self.objects[self.current_object_name]["mask_uint8"] = self.current_object["mask_uint8"]
         self.objects[self.current_object_name]["mask"] = self.current_object["mask"]
         self.objects_count[self.current_class] += 1
         self.points = []
@@ -440,7 +467,8 @@ class SegmentWindow(QWidget):
             for key in self.objects.keys():
                 for i in range(len(self.classes)):
                     if self.classes[i] in key:
-                        line = self.create_yolo_line_from_mask(i, self.objects[key]['mask_uint8'], self.source_width, self.source_height)
+                        mask8 = np.any(self.objects[key]['mask'] != 0, axis=-1).astype(np.uint8)
+                        line = self.create_yolo_line_from_mask(i, mask8, self.source_width, self.source_height)
                         f.write(line + "\n")
         # with open('../test.npy', 'wb') as f:
         #     np.save(f, self.mask_uint8)

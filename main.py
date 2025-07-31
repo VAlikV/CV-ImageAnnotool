@@ -15,7 +15,7 @@ if __name__ == "__main__":
         elif selected == 1:
             window = DirectionWindow()
         window.show()
-        window.setFixedSize(300,150)
+        window.setFixedSize(400,150)
         sys.exit(app.exec_())  # запускаем только если диалог был успешно завершён
     else:
         print("Пользователь закрыл диалог")

@@ -9,6 +9,8 @@ label_path = 'output/2.txt'
 image = cv2.imread(image_path)
 h, w = image.shape[:2]
 
+colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+
 # Чтение разметки
 with open(label_path, 'r') as f:
     lines = f.readlines()
@@ -24,8 +26,8 @@ for line in lines:
     ])
 
     # Рисуем полигон
-    cv2.polylines(image, [points], isClosed=True, color=(0, 255, 0), thickness=2)
-    cv2.fillPoly(image, [points], color=(0, 255, 0, 50))  # заливаем полигон полупрозрачным
+    cv2.polylines(image, [points], isClosed=True, color=colors[cls_id], thickness=2)
+    cv2.fillPoly(image, [points], color=colors[cls_id])  # заливаем полигон полупрозрачным
 
 # Показываем результат
 cv2.imshow('Segmentation Overlay', image)

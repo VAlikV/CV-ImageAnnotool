@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox, QCheckBox, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox, QCheckBox, QListWidget
 from widgets.sam2 import SAM2
 import os
 import cv2
@@ -8,7 +8,7 @@ class SegmentWindow(QWidget):
     def __init__(self, image_height = 1216, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector"]
+        self.classes = ["Connector", "Capacitor", "Led"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
@@ -114,11 +114,23 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
-        self.main_layout = QVBoxLayout()
-        self.main_layout.addLayout(self.up_layout)
-        self.main_layout.addLayout(self.middle_layout)
-        self.main_layout.addLayout(self.draw_layout)
-        self.main_layout.addLayout(self.down_layout)     
+        self.left_layout = QVBoxLayout()
+        self.left_layout.addLayout(self.up_layout)
+        self.left_layout.addLayout(self.middle_layout)
+        self.left_layout.addLayout(self.draw_layout)
+        self.left_layout.addLayout(self.down_layout)   
+
+        # =======================================================
+
+        self.right_layout = QVBoxLayout() 
+        self.objects_list = QListWidget()
+        self.right_layout.addWidget(self.objects_list)
+
+        # =======================================================
+
+        self.main_layout = QHBoxLayout()
+        self.main_layout.addLayout(self.left_layout)
+        self.main_layout.addLayout(self.right_layout)
 
         self.setLayout(self.main_layout)
 
@@ -138,6 +150,8 @@ class SegmentWindow(QWidget):
         self.generate_button.clicked.connect(self.generateLable)
 
         self.draw_size_edit.textChanged.connect(self.setDrawSize)
+
+        self.objects_list.currentItemChanged.connect(self.selectObject)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
@@ -193,6 +207,11 @@ class SegmentWindow(QWidget):
 
             self.objects = {}
             self.current_object = {}
+
+            self.points = []
+            self.labels = []
+
+            self.objects_list.clear()
 
             self.source_image = cv2.imread("input/" + self.file_name)
             self.source_image = cv2.resize(self.source_image, (self.source_width, self.source_height))
@@ -349,11 +368,11 @@ class SegmentWindow(QWidget):
 
         if len(self.current_object.keys()) > 0:
             mask = cv2.resize(self.current_object["mask"], (self.image_width, self.image_height))
-            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.75, 0)
+            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.90, 0)
 
         for obj in self.objects.keys():
             mask = cv2.resize(self.objects[obj]["mask"], (self.image_width, self.image_height))
-            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.75, 0)
+            self.masked_image = cv2.addWeighted(self.masked_image, 1.0, mask, 0.90, 0)
 
         if len(self.current_object.keys()) > 0:
             bbox = self.getBoundingBox()
@@ -398,15 +417,24 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def completeObject(self):
+        if self.current_object_name not in self.objects.keys():
+            self.objects_count[self.current_class] += 1
+
         self.objects[self.current_object_name] = {}
-        # self.objects[self.current_object_name]["mask_uint8"] = self.current_object["mask_uint8"]
         self.objects[self.current_object_name]["mask"] = self.current_object["mask"]
-        self.objects_count[self.current_class] += 1
+
         self.points = []
         self.labels = []
         self.current_object = {}
+
         print("Add ", self.current_object_name)
+
+        items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
+        if self.current_object_name not in items:
+            self.objects_list.addItem(self.current_object_name)
+
         self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+        self.combobox_classes.setEnabled(True)
 
 # -------------------------------------------------------------------------
 # Отмена сегентации объекта 
@@ -417,6 +445,23 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
         print("Cancel")
+
+        self.printMasks()
+
+# -------------------------------------------------------------------------
+# Отмена сегентации объекта 
+# -------------------------------------------------------------------------
+
+    def selectObject(self):
+        self.current_object_name = self.objects_list.currentItem().text()
+        self.current_object = self.objects[self.current_object_name]
+        self.current_class = self.current_object_name[0:self.current_object_name.find("_")]
+
+        self.points = []
+        self.labels = []
+        self.color = self.classes_color[self.current_class]
+        print("Select object: ", self.current_object_name)
+        self.combobox_classes.setEnabled(False)
 
         self.printMasks()
 

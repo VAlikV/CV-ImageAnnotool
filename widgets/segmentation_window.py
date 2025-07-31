@@ -80,6 +80,14 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
+        self.open_button = QPushButton("Open")
+        self.open_layout = QHBoxLayout()
+        self.open_layout.addStretch(1)
+        self.open_layout.addWidget(self.open_button)
+        self.open_layout.addStretch(1)
+
+        # =======================================================
+
         self.combobox_classes = QComboBox()
         self.combobox_classes.setFixedWidth(120)
         self.combobox_classes.addItems(self.classes)
@@ -116,6 +124,7 @@ class SegmentWindow(QWidget):
 
         self.left_layout = QVBoxLayout()
         self.left_layout.addLayout(self.up_layout)
+        self.left_layout.addLayout(self.open_layout)
         self.left_layout.addLayout(self.middle_layout)
         self.left_layout.addLayout(self.draw_layout)
         self.left_layout.addLayout(self.down_layout)   
@@ -153,6 +162,8 @@ class SegmentWindow(QWidget):
 
         self.objects_list.currentItemChanged.connect(self.selectObject)
 
+        self.open_button.clicked.connect(self.openLabel)
+
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
 # -------------------------------------------------------------------------
@@ -165,6 +176,7 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def selectNextFile(self):
+
         if self.current_file_index < len(self.file_list) - 1:
             self.current_file_index += 1
             self.file_name = self.file_list[self.current_file_index]
@@ -181,6 +193,7 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def selectPrevFile(self):
+
         if self.current_file_index > 0:
             self.current_file_index -= 1
             self.file_name = self.file_list[self.current_file_index]
@@ -201,6 +214,9 @@ class SegmentWindow(QWidget):
         self.x_offset, self.y_offset = 0, 0
 
         if self.file_name[len(self.file_name)-3:len(self.file_name)] == "jpg" or self.file_name[len(self.file_name)-3:len(self.file_name)] == "png":
+            
+            self.objects_list.clear()
+
             self.objects_count = {}
             for c in self.classes:
                 self.objects_count[c] = 0
@@ -211,7 +227,7 @@ class SegmentWindow(QWidget):
             self.points = []
             self.labels = []
 
-            self.objects_list.clear()
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
 
             self.source_image = cv2.imread("input/" + self.file_name)
             self.source_image = cv2.resize(self.source_image, (self.source_width, self.source_height))
@@ -420,21 +436,22 @@ class SegmentWindow(QWidget):
         if self.current_object_name not in self.objects.keys():
             self.objects_count[self.current_class] += 1
 
-        self.objects[self.current_object_name] = {}
-        self.objects[self.current_object_name]["mask"] = self.current_object["mask"]
+        if len(self.current_object.keys()) > 0:
+            self.objects[self.current_object_name] = {}
+            self.objects[self.current_object_name]["mask"] = self.current_object["mask"]
 
-        self.points = []
-        self.labels = []
-        self.current_object = {}
+            self.points = []
+            self.labels = []
+            self.current_object = {}
 
-        print("Add ", self.current_object_name)
+            print("Add ", self.current_object_name)
 
-        items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
-        if self.current_object_name not in items:
-            self.objects_list.addItem(self.current_object_name)
+            items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
+            if self.current_object_name not in items:
+                self.objects_list.addItem(self.current_object_name)
 
-        self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
-        self.combobox_classes.setEnabled(True)
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+            self.combobox_classes.setEnabled(True)
 
 # -------------------------------------------------------------------------
 # Отмена сегентации объекта 
@@ -446,24 +463,30 @@ class SegmentWindow(QWidget):
         self.labels = []
         print("Cancel")
 
+        self.combobox_classes.setEnabled(True)
+
         self.printMasks()
 
 # -------------------------------------------------------------------------
-# Отмена сегентации объекта 
+# выбор объекта 
 # -------------------------------------------------------------------------
 
     def selectObject(self):
-        self.current_object_name = self.objects_list.currentItem().text()
-        self.current_object = self.objects[self.current_object_name]
-        self.current_class = self.current_object_name[0:self.current_object_name.find("_")]
 
-        self.points = []
-        self.labels = []
-        self.color = self.classes_color[self.current_class]
-        print("Select object: ", self.current_object_name)
-        self.combobox_classes.setEnabled(False)
+        print(self.objects_list.count())
+        if not (self.objects_list.currentItem() is None):
 
-        self.printMasks()
+            self.current_object_name = self.objects_list.currentItem().text()
+            self.current_object = self.objects[self.current_object_name]
+            self.current_class = self.current_object_name[0:self.current_object_name.find("_")]
+
+            self.points = []
+            self.labels = []
+            self.color = self.classes_color[self.current_class]
+            print("Select object: ", self.current_object_name)
+            self.combobox_classes.setEnabled(False)
+
+            self.printMasks()
 
 # -------------------------------------------------------------------------
 # Формирование контура
@@ -518,3 +541,52 @@ class SegmentWindow(QWidget):
         # with open('../test.npy', 'wb') as f:
         #     np.save(f, self.mask_uint8)
         print(self.file_name[0:-4] + " Coplete!")
+
+# -------------------------------------------------------------------------
+# Загрузка лейбла
+# -------------------------------------------------------------------------
+
+    def openLabel(self):
+        with open("output/" + self.file_name[0:-4] + ".txt", "r") as f:
+            self.zoom = 1
+            self.x_offset, self.y_offset = 0, 0
+
+            self.objects_count = {}
+            for c in self.classes:
+                self.objects_count[c] = 0
+
+            self.objects = {}
+            self.current_object = {}
+
+            self.points = []
+            self.labels = []
+
+            self.objects_list.clear()
+
+            lines = f.readlines()
+
+            h, w = self.source_image.shape[:2]
+
+            # Перебираем все аннотированные объекты
+            for line in lines:
+                parts = line.strip().split()
+                cls_id = int(parts[0])
+                coords = list(map(float, parts[1:]))
+                points = np.array([
+                    [int(float(coords[i]) * w), int(float(coords[i+1]) * h)]
+                    for i in range(0, len(coords), 2)
+                ])
+                
+                name = self.classes[cls_id]+"_"+str(self.objects_count[self.classes[cls_id]])
+                self.objects[name] = {}
+                self.objects[name]["mask"] = np.zeros(self.source_image.shape, dtype=np.uint8)  # shape: (H, W, 3)
+                self.objects_count[self.classes[cls_id]] += 1
+
+                # Рисуем полигон
+                cv2.polylines(self.objects[name]["mask"], [points], isClosed=True, color=self.classes_color[self.classes[cls_id]], thickness=2)
+                cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
+
+                self.objects_list.addItem(name)
+
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+            self.printMasks()

@@ -4,6 +4,7 @@ from widgets.sam2 import SAM2
 import os
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 class SegmentWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
@@ -49,6 +50,8 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
 
+        self.yolo_model = YOLO("yolo_models/nano_6_07_08.pt")
+
         self.draw = False
         self.left_flag = False
         self.right_flag = False
@@ -82,9 +85,11 @@ class SegmentWindow(QWidget):
         # =======================================================
 
         self.open_button = QPushButton("Open")
+        self.auto_button = QPushButton("Auto")
         self.open_layout = QHBoxLayout()
         self.open_layout.addStretch(1)
         self.open_layout.addWidget(self.open_button)
+        self.open_layout.addWidget(self.auto_button)
         self.open_layout.addStretch(1)
 
         # =======================================================
@@ -168,6 +173,7 @@ class SegmentWindow(QWidget):
         self.objects_list.currentItemChanged.connect(self.selectObject)
 
         self.open_button.clicked.connect(self.openLabel)
+        self.auto_button.clicked.connect(self.autoSegmentation)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
@@ -630,6 +636,55 @@ class SegmentWindow(QWidget):
                 cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
 
                 self.objects_list.addItem(name)
+
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+            self.printMasks()
+
+# -------------------------------------------------------------------------
+# Авторазметка
+# -------------------------------------------------------------------------
+
+    def autoSegmentation(self):
+
+        self.zoom = 1
+        self.x_offset, self.y_offset = 0, 0
+
+        self.objects_count = {}
+        for c in self.classes:
+            self.objects_count[c] = 0
+
+        self.objects = {}
+        self.current_object = {}
+
+        self.points = []
+        self.labels = []
+
+        self.objects_list.clear()
+
+        image = cv2.resize(self.source_image, [1600,928])
+
+        results = self.yolo_model(image)
+
+        if results[0]:
+            class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
+
+            for result in results:
+                masks = result.masks.data
+                for i, box in enumerate(result.boxes):
+
+                    mask_np = masks[i].cpu().numpy()
+                    color = self.classes_color[self.classes[class_ids[i]]]
+                    
+                    colored_mask = np.zeros_like(image)
+                    for c in range(3):
+                        colored_mask[:, :, c] = mask_np * color[c]
+                    
+                    name = self.classes[class_ids[i]]+"_"+str(self.objects_count[self.classes[class_ids[i]]])
+                    self.objects[name] = {}
+                    self.objects[name]["mask"] = cv2.resize(colored_mask, (self.source_image.shape[1], self.source_image.shape[0]))
+                    self.objects_count[self.classes[class_ids[i]]] += 1
+
+                    self.objects_list.addItem(name)
 
             self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
             self.printMasks()

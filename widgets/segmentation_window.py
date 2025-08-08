@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox, QCheckBox, QListWidget
+from PyQt5 import QtCore
 from widgets.sam2 import SAM2
 import os
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 class SegmentWindow(QWidget):
-    def __init__(self, image_height = 1216, image_width = 1600):
+    def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
         self.classes = ["Connector", "Capacitor", "Led"]
@@ -48,6 +50,8 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
 
+        self.yolo_model = YOLO("yolo_models/nano_6_07_08.pt")
+
         self.draw = False
         self.left_flag = False
         self.right_flag = False
@@ -81,9 +85,11 @@ class SegmentWindow(QWidget):
         # =======================================================
 
         self.open_button = QPushButton("Open")
+        self.auto_button = QPushButton("Auto")
         self.open_layout = QHBoxLayout()
         self.open_layout.addStretch(1)
         self.open_layout.addWidget(self.open_button)
+        self.open_layout.addWidget(self.auto_button)
         self.open_layout.addStretch(1)
 
         # =======================================================
@@ -112,10 +118,13 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
+        self.delete_button = QPushButton("Delete")
         self.cancel_button = QPushButton("Cancel")
         self.ok_button = QPushButton("Ok")
         self.generate_button = QPushButton("Generate")
         self.down_layout = QHBoxLayout()
+        self.down_layout.addWidget(self.delete_button)
+        self.delete_button.setEnabled(False)
         self.down_layout.addWidget(self.cancel_button)
         self.down_layout.addWidget(self.ok_button)
         self.down_layout.addWidget(self.generate_button)
@@ -157,12 +166,14 @@ class SegmentWindow(QWidget):
         self.ok_button.clicked.connect(self.completeObject)
         self.cancel_button.clicked.connect(self.cancelObject)
         self.generate_button.clicked.connect(self.generateLable)
+        self.delete_button.clicked.connect(self.deleteObject)
 
         self.draw_size_edit.textChanged.connect(self.setDrawSize)
 
         self.objects_list.currentItemChanged.connect(self.selectObject)
 
         self.open_button.clicked.connect(self.openLabel)
+        self.auto_button.clicked.connect(self.autoSegmentation)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
@@ -238,8 +249,19 @@ class SegmentWindow(QWidget):
             cv2.namedWindow("Image")
             cv2.setMouseCallback("Image", self.callback)
             cv2.imshow("Image", self.masked_image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            key = cv2.waitKey(0)
+
+            if key == ord('a'):
+                self.openLabel()
+            elif key == ord('w'):
+                self.completeObject()
+            elif key == ord('d'):
+                self.generateLable()
+            elif key == ord('e'):
+                self.selectNextFile()
+            elif key == ord('q'):
+                self.selectPrevFile()
+            # cv2.destroyAllWindows()
 
 # -------------------------------------------------------------------------
 # Выбор нового класса  
@@ -452,6 +474,7 @@ class SegmentWindow(QWidget):
 
             self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
             self.combobox_classes.setEnabled(True)
+            self.delete_button.setEnabled(False)
 
 # -------------------------------------------------------------------------
 # Отмена сегентации объекта 
@@ -464,6 +487,7 @@ class SegmentWindow(QWidget):
         print("Cancel")
 
         self.combobox_classes.setEnabled(True)
+        self.delete_button.setEnabled(False)
 
         self.printMasks()
 
@@ -473,7 +497,6 @@ class SegmentWindow(QWidget):
 
     def selectObject(self):
 
-        print(self.objects_list.count())
         if not (self.objects_list.currentItem() is None):
 
             self.current_object_name = self.objects_list.currentItem().text()
@@ -485,6 +508,32 @@ class SegmentWindow(QWidget):
             self.color = self.classes_color[self.current_class]
             print("Select object: ", self.current_object_name)
             self.combobox_classes.setEnabled(False)
+            self.delete_button.setEnabled(True)
+
+            self.printMasks()
+
+# -------------------------------------------------------------------------
+# Удаление объекта
+# -------------------------------------------------------------------------
+
+    def deleteObject(self):
+
+        if self.current_object_name in self.objects.keys():
+
+            self.objects.pop(self.current_object_name)
+
+            self.points = []
+            self.labels = []
+            self.current_object = {}
+
+            print("Delete ", self.current_object_name)
+
+            items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
+            if self.current_object_name in items:
+                self.objects_list.takeItem(items.index(self.current_object_name))
+
+            self.combobox_classes.setEnabled(True)
+            self.delete_button.setEnabled(False)
 
             self.printMasks()
 
@@ -587,6 +636,55 @@ class SegmentWindow(QWidget):
                 cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
 
                 self.objects_list.addItem(name)
+
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+            self.printMasks()
+
+# -------------------------------------------------------------------------
+# Авторазметка
+# -------------------------------------------------------------------------
+
+    def autoSegmentation(self):
+
+        self.zoom = 1
+        self.x_offset, self.y_offset = 0, 0
+
+        self.objects_count = {}
+        for c in self.classes:
+            self.objects_count[c] = 0
+
+        self.objects = {}
+        self.current_object = {}
+
+        self.points = []
+        self.labels = []
+
+        self.objects_list.clear()
+
+        image = cv2.resize(self.source_image, [1600,928])
+
+        results = self.yolo_model(image)
+
+        if results[0]:
+            class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
+
+            for result in results:
+                masks = result.masks.data
+                for i, box in enumerate(result.boxes):
+
+                    mask_np = masks[i].cpu().numpy()
+                    color = self.classes_color[self.classes[class_ids[i]]]
+                    
+                    colored_mask = np.zeros_like(image)
+                    for c in range(3):
+                        colored_mask[:, :, c] = mask_np * color[c]
+                    
+                    name = self.classes[class_ids[i]]+"_"+str(self.objects_count[self.classes[class_ids[i]]])
+                    self.objects[name] = {}
+                    self.objects[name]["mask"] = cv2.resize(colored_mask, (self.source_image.shape[1], self.source_image.shape[0]))
+                    self.objects_count[self.classes[class_ids[i]]] += 1
+
+                    self.objects_list.addItem(name)
 
             self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
             self.printMasks()

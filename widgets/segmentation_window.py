@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox, QCheckBox, QListWidget
+from PyQt5 import QtCore
 from widgets.sam2 import SAM2
 import os
 import cv2
 import numpy as np
 
 class SegmentWindow(QWidget):
-    def __init__(self, image_height = 1216, image_width = 1600):
+    def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
         self.classes = ["Connector", "Capacitor", "Led"]
@@ -112,10 +113,13 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
+        self.delete_button = QPushButton("Delete")
         self.cancel_button = QPushButton("Cancel")
         self.ok_button = QPushButton("Ok")
         self.generate_button = QPushButton("Generate")
         self.down_layout = QHBoxLayout()
+        self.down_layout.addWidget(self.delete_button)
+        self.delete_button.setEnabled(False)
         self.down_layout.addWidget(self.cancel_button)
         self.down_layout.addWidget(self.ok_button)
         self.down_layout.addWidget(self.generate_button)
@@ -157,6 +161,7 @@ class SegmentWindow(QWidget):
         self.ok_button.clicked.connect(self.completeObject)
         self.cancel_button.clicked.connect(self.cancelObject)
         self.generate_button.clicked.connect(self.generateLable)
+        self.delete_button.clicked.connect(self.deleteObject)
 
         self.draw_size_edit.textChanged.connect(self.setDrawSize)
 
@@ -238,8 +243,19 @@ class SegmentWindow(QWidget):
             cv2.namedWindow("Image")
             cv2.setMouseCallback("Image", self.callback)
             cv2.imshow("Image", self.masked_image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            key = cv2.waitKey(0)
+
+            if key == ord('a'):
+                self.openLabel()
+            elif key == ord('w'):
+                self.completeObject()
+            elif key == ord('d'):
+                self.generateLable()
+            elif key == ord('e'):
+                self.selectNextFile()
+            elif key == ord('q'):
+                self.selectPrevFile()
+            # cv2.destroyAllWindows()
 
 # -------------------------------------------------------------------------
 # Выбор нового класса  
@@ -452,6 +468,7 @@ class SegmentWindow(QWidget):
 
             self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
             self.combobox_classes.setEnabled(True)
+            self.delete_button.setEnabled(False)
 
 # -------------------------------------------------------------------------
 # Отмена сегентации объекта 
@@ -464,6 +481,7 @@ class SegmentWindow(QWidget):
         print("Cancel")
 
         self.combobox_classes.setEnabled(True)
+        self.delete_button.setEnabled(False)
 
         self.printMasks()
 
@@ -473,7 +491,6 @@ class SegmentWindow(QWidget):
 
     def selectObject(self):
 
-        print(self.objects_list.count())
         if not (self.objects_list.currentItem() is None):
 
             self.current_object_name = self.objects_list.currentItem().text()
@@ -485,6 +502,32 @@ class SegmentWindow(QWidget):
             self.color = self.classes_color[self.current_class]
             print("Select object: ", self.current_object_name)
             self.combobox_classes.setEnabled(False)
+            self.delete_button.setEnabled(True)
+
+            self.printMasks()
+
+# -------------------------------------------------------------------------
+# Удаление объекта
+# -------------------------------------------------------------------------
+
+    def deleteObject(self):
+
+        if self.current_object_name in self.objects.keys():
+
+            self.objects.pop(self.current_object_name)
+
+            self.points = []
+            self.labels = []
+            self.current_object = {}
+
+            print("Delete ", self.current_object_name)
+
+            items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
+            if self.current_object_name in items:
+                self.objects_list.takeItem(items.index(self.current_object_name))
+
+            self.combobox_classes.setEnabled(True)
+            self.delete_button.setEnabled(False)
 
             self.printMasks()
 

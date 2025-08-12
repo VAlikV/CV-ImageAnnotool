@@ -73,8 +73,8 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
-        self.prev_button = QPushButton("Prev")
-        self.next_button = QPushButton("Next")
+        self.prev_button = QPushButton("Prev (q)")
+        self.next_button = QPushButton("Next (e)")
         self.file_name_line = QLineEdit()
         self.file_name_line.setReadOnly(True)
         self.up_layout = QHBoxLayout()
@@ -84,7 +84,7 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
-        self.open_button = QPushButton("Open")
+        self.open_button = QPushButton("Open (a)")
         self.auto_button = QPushButton("Auto")
         self.open_layout = QHBoxLayout()
         self.open_layout.addStretch(1)
@@ -120,8 +120,8 @@ class SegmentWindow(QWidget):
 
         self.delete_button = QPushButton("Delete")
         self.cancel_button = QPushButton("Cancel")
-        self.ok_button = QPushButton("Ok")
-        self.generate_button = QPushButton("Generate")
+        self.ok_button = QPushButton("Ok (w)")
+        self.generate_button = QPushButton("Generate (d)")
         self.down_layout = QHBoxLayout()
         self.down_layout.addWidget(self.delete_button)
         self.delete_button.setEnabled(False)
@@ -362,6 +362,19 @@ class SegmentWindow(QWidget):
         img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
         cv2.imshow("Image", img)
 
+        key = cv2.waitKey(0)
+
+        if key == ord('a'):
+            self.openLabel()
+        elif key == ord('w'):
+            self.completeObject()
+        elif key == ord('d'):
+            self.generateLable()
+        elif key == ord('e'):
+            self.selectNextFile()
+        elif key == ord('q'):
+            self.selectPrevFile()
+
 # -------------------------------------------------------------------------
 # Прямой проход по sam  
 # -------------------------------------------------------------------------
@@ -425,6 +438,19 @@ class SegmentWindow(QWidget):
         img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
 
         cv2.imshow("Image", img)
+
+        key = cv2.waitKey(0)
+
+        if key == ord('a'):
+            self.openLabel()
+        elif key == ord('w'):
+            self.completeObject()
+        elif key == ord('d'):
+            self.generateLable()
+        elif key == ord('e'):
+            self.selectNextFile()
+        elif key == ord('q'):
+            self.selectPrevFile()
 
 # -------------------------------------------------------------------------
 # Генерация бокса

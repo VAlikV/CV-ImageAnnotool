@@ -10,7 +10,7 @@ class SegmentWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led"]
+        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
@@ -251,17 +251,17 @@ class SegmentWindow(QWidget):
             cv2.imshow("Image", self.masked_image)
             key = cv2.waitKey(0)
 
-            if key == ord('a'):
-                self.openLabel()
-            elif key == ord('w'):
-                self.completeObject()
-            elif key == ord('d'):
-                self.generateLable()
-            elif key == ord('e'):
-                self.selectNextFile()
-            elif key == ord('q'):
-                self.selectPrevFile()
-            # cv2.destroyAllWindows()
+            # if key == ord('a'):
+            #     self.openLabel()
+            # elif key == ord('w'):
+            #     self.completeObject()
+            # elif key == ord('d'):
+            #     self.generateLable()
+            # elif key == ord('e'):
+            #     self.selectNextFile()
+            # elif key == ord('q'):
+            #     self.selectPrevFile()
+            # # cv2.destroyAllWindows()
 
 # -------------------------------------------------------------------------
 # Выбор нового класса  
@@ -362,18 +362,18 @@ class SegmentWindow(QWidget):
         img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
         cv2.imshow("Image", img)
 
-        key = cv2.waitKey(0)
+        # key = cv2.waitKey(0)
 
-        if key == ord('a'):
-            self.openLabel()
-        elif key == ord('w'):
-            self.completeObject()
-        elif key == ord('d'):
-            self.generateLable()
-        elif key == ord('e'):
-            self.selectNextFile()
-        elif key == ord('q'):
-            self.selectPrevFile()
+        # if key == ord('a'):
+        #     self.openLabel()
+        # elif key == ord('w'):
+        #     self.completeObject()
+        # elif key == ord('d'):
+        #     self.generateLable()
+        # elif key == ord('e'):
+        #     self.selectNextFile()
+        # elif key == ord('q'):
+        #     self.selectPrevFile()
 
 # -------------------------------------------------------------------------
 # Прямой проход по sam  
@@ -439,18 +439,18 @@ class SegmentWindow(QWidget):
 
         cv2.imshow("Image", img)
 
-        key = cv2.waitKey(0)
+        # key = cv2.waitKey(0)
 
-        if key == ord('a'):
-            self.openLabel()
-        elif key == ord('w'):
-            self.completeObject()
-        elif key == ord('d'):
-            self.generateLable()
-        elif key == ord('e'):
-            self.selectNextFile()
-        elif key == ord('q'):
-            self.selectPrevFile()
+        # if key == ord('a'):
+        #     self.openLabel()
+        # elif key == ord('w'):
+        #     self.completeObject()
+        # elif key == ord('d'):
+        #     self.generateLable()
+        # elif key == ord('e'):
+        #     self.selectNextFile()
+        # elif key == ord('q'):
+        #     self.selectPrevFile()
 
 # -------------------------------------------------------------------------
 # Генерация бокса
@@ -561,7 +561,10 @@ class SegmentWindow(QWidget):
             self.combobox_classes.setEnabled(True)
             self.delete_button.setEnabled(False)
 
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+
             self.printMasks()
+            self.cancelObject()
 
 # -------------------------------------------------------------------------
 # Формирование контура

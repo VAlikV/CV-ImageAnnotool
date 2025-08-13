@@ -9,7 +9,7 @@ class DialogWindow(QDialog):
         self.selected_option = None  # параметр, который пользователь выберет
 
         self.combo = QComboBox()
-        self.combo.addItems(["Segmentation", "Direction"])
+        self.combo.addItems(["Segmentation", "Detection", "Direction"])
 
         self.ok_button = QPushButton("OK")
         self.ok_button.clicked.connect(self.accept)

@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QApplication, QDialog
 from widgets.segmentation_window import SegmentWindow
 from widgets.dialog_window import DialogWindow
 from widgets.direction_window import DirectionWindow
+from widgets.detection_window import DetectionWindow
  
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -13,6 +14,8 @@ if __name__ == "__main__":
         if selected == 0:
             window = SegmentWindow()
         elif selected == 1:
+            window = DetectionWindow()
+        elif selected == 2:
             window = DirectionWindow()
         window.show()
         window.setFixedSize(450,200)

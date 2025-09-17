@@ -12,9 +12,9 @@ if __name__ == "__main__":
     if dialog.exec_() == QDialog.Accepted:
         selected = dialog.selected_option
         if selected == 0:
-            window = SegmentWindow()
+            window = SegmentWindow(image_height = 900, image_width = 1600)
         elif selected == 1:
-            window = DetectionWindow()
+            window = DetectionWindow(image_height = 180, image_width = 320)
         elif selected == 2:
             window = DirectionWindow()
         window.show()
@@ -24,4 +24,5 @@ if __name__ == "__main__":
         print("Пользователь закрыл диалог")
         sys.exit(0)
 
+    
     

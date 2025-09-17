@@ -5,12 +5,14 @@ import os
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from typing import Tuple, Optional
 
 class DetectionWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil"]
+        # self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil"]
+        self.classes = ["PCB"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
@@ -148,6 +150,8 @@ class DetectionWindow(QWidget):
         self.objects_list.currentItemChanged.connect(self.selectObject)
 
         self.open_button.clicked.connect(self.openLabel)
+
+        self.auto_button.clicked.connect(self.autoDetection)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 
@@ -564,3 +568,58 @@ class DetectionWindow(QWidget):
 
             self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
             self.printBox()
+
+# -------------------------------------------------------------------------
+# Auto
+# -------------------------------------------------------------------------
+
+    def autoDetection(self):
+        min_area_ratio = 0.01
+
+        h, w = self.source_image.shape[:2]
+        img_area = h * w
+
+        gray = cv2.cvtColor(self.source_image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # Бинаризация: светлый фон → инвертируем
+        _, bin_inv = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+        k = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        mask = cv2.morphologyEx(bin_inv, cv2.MORPH_OPEN, k, iterations=1)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, k, iterations=2)
+
+        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = [c for c in cnts if cv2.contourArea(c) >= min_area_ratio * img_area]
+        if not cnts:
+            print("Ochko")
+            return None
+
+        cnt = max(cnts, key=cv2.contourArea)
+        x, y, bw, bh = cv2.boundingRect(cnt)
+
+        self.points = np.array([[x,y],[x + bw,y + bh]])
+        self.current_object["box"] = self.points
+
+        if self.current_object_name not in self.objects.keys():
+            self.objects_count[self.current_class] += 1
+
+        if len(self.current_object.keys()) > 0:
+            self.objects[self.current_object_name] = {}
+            self.objects[self.current_object_name]["box"] = self.current_object["box"]
+
+            self.points = np.array([[0,0],[0,0]])
+            self.stage = 0
+            self.current_object = {}
+
+            print("Add ", self.current_object_name)
+
+            items = [self.objects_list.item(x).text() for x in range(self.objects_list.count())]
+            if self.current_object_name not in items:
+                self.objects_list.addItem(self.current_object_name)
+
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+            self.combobox_classes.setEnabled(True)
+            self.delete_button.setEnabled(False)
+        
+        self.printBox()

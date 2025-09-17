@@ -201,7 +201,7 @@ class DirectionWindow(QWidget):
             self.points[1,1] = y - self.points[0,1]
             self.stage = 2
 
-        print(self.points)
+        # print(self.points)
         self.printVector()
 
 # -------------------------------------------------------------------------
@@ -247,3 +247,4 @@ class DirectionWindow(QWidget):
                 line += " " + str(dy)
                 f.write(line)
         print(self.file_name[0:-4] + " Coplete!")
+        print("===")

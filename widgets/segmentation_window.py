@@ -10,13 +10,13 @@ class SegmentWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil"]
+        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue_connector", "Terminal"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
         self.file_list = []
 
-        colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+        colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255), (255, 125, 0)]
         # self.colors = np.random.uniform(0, 256, (len(self.classes),3))
 
         self.classes_color = {}
@@ -50,7 +50,7 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
 
-        self.yolo_model = YOLO("yolo_models/nano_6_07_08.pt")
+        self.yolo_model = YOLO("yolo_models/medium_2_15_08.pt")
 
         self.draw = False
         self.left_flag = False

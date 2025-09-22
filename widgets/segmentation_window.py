@@ -10,13 +10,13 @@ class SegmentWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led"]
+        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue_connector", "Terminal"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
         self.file_list = []
 
-        colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+        colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255), (255, 125, 0)]
         # self.colors = np.random.uniform(0, 256, (len(self.classes),3))
 
         self.classes_color = {}
@@ -50,7 +50,7 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
 
-        self.yolo_model = YOLO("yolo_models/nano_6_07_08.pt")
+        self.yolo_model = YOLO("yolo_models/medium_3_01_09.pt")
 
         self.draw = False
         self.left_flag = False
@@ -73,8 +73,8 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
-        self.prev_button = QPushButton("Prev")
-        self.next_button = QPushButton("Next")
+        self.prev_button = QPushButton("Prev (q)")
+        self.next_button = QPushButton("Next (e)")
         self.file_name_line = QLineEdit()
         self.file_name_line.setReadOnly(True)
         self.up_layout = QHBoxLayout()
@@ -84,7 +84,7 @@ class SegmentWindow(QWidget):
 
         # =======================================================
 
-        self.open_button = QPushButton("Open")
+        self.open_button = QPushButton("Open (a)")
         self.auto_button = QPushButton("Auto")
         self.open_layout = QHBoxLayout()
         self.open_layout.addStretch(1)
@@ -120,8 +120,8 @@ class SegmentWindow(QWidget):
 
         self.delete_button = QPushButton("Delete")
         self.cancel_button = QPushButton("Cancel")
-        self.ok_button = QPushButton("Ok")
-        self.generate_button = QPushButton("Generate")
+        self.ok_button = QPushButton("Ok (w)")
+        self.generate_button = QPushButton("Generate (d)")
         self.down_layout = QHBoxLayout()
         self.down_layout.addWidget(self.delete_button)
         self.delete_button.setEnabled(False)
@@ -251,17 +251,17 @@ class SegmentWindow(QWidget):
             cv2.imshow("Image", self.masked_image)
             key = cv2.waitKey(0)
 
-            if key == ord('a'):
-                self.openLabel()
-            elif key == ord('w'):
-                self.completeObject()
-            elif key == ord('d'):
-                self.generateLable()
-            elif key == ord('e'):
-                self.selectNextFile()
-            elif key == ord('q'):
-                self.selectPrevFile()
-            # cv2.destroyAllWindows()
+            # if key == ord('a'):
+            #     self.openLabel()
+            # elif key == ord('w'):
+            #     self.completeObject()
+            # elif key == ord('d'):
+            #     self.generateLable()
+            # elif key == ord('e'):
+            #     self.selectNextFile()
+            # elif key == ord('q'):
+            #     self.selectPrevFile()
+            # # cv2.destroyAllWindows()
 
 # -------------------------------------------------------------------------
 # Выбор нового класса  
@@ -362,6 +362,19 @@ class SegmentWindow(QWidget):
         img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
         cv2.imshow("Image", img)
 
+        # key = cv2.waitKey(0)
+
+        # if key == ord('a'):
+        #     self.openLabel()
+        # elif key == ord('w'):
+        #     self.completeObject()
+        # elif key == ord('d'):
+        #     self.generateLable()
+        # elif key == ord('e'):
+        #     self.selectNextFile()
+        # elif key == ord('q'):
+        #     self.selectPrevFile()
+
 # -------------------------------------------------------------------------
 # Прямой проход по sam  
 # -------------------------------------------------------------------------
@@ -425,6 +438,19 @@ class SegmentWindow(QWidget):
         img = cv2.resize(img, (self.masked_image.shape[1], self.masked_image.shape[0]))
 
         cv2.imshow("Image", img)
+
+        # key = cv2.waitKey(0)
+
+        # if key == ord('a'):
+        #     self.openLabel()
+        # elif key == ord('w'):
+        #     self.completeObject()
+        # elif key == ord('d'):
+        #     self.generateLable()
+        # elif key == ord('e'):
+        #     self.selectNextFile()
+        # elif key == ord('q'):
+        #     self.selectPrevFile()
 
 # -------------------------------------------------------------------------
 # Генерация бокса
@@ -535,7 +561,10 @@ class SegmentWindow(QWidget):
             self.combobox_classes.setEnabled(True)
             self.delete_button.setEnabled(False)
 
+            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+
             self.printMasks()
+            self.cancelObject()
 
 # -------------------------------------------------------------------------
 # Формирование контура

@@ -50,7 +50,7 @@ class SegmentWindow(QWidget):
         self.points = []
         self.labels = []
 
-        self.yolo_model = YOLO("yolo_models/medium_2_15_08.pt")
+        self.yolo_model = YOLO("yolo_models/medium_3_01_09.pt")
 
         self.draw = False
         self.left_flag = False

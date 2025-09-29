@@ -574,6 +574,12 @@ class SegmentWindow(QWidget):
         # Убедимся, что маска uint8
         binary_mask = (mask > 0).astype(np.uint8) * 255
 
+
+        smoothed = cv2.GaussianBlur(binary_mask, (5, 5), 0)
+
+        # Повторная бинаризация
+        _, binary_mask = cv2.threshold(smoothed, 127, 255, cv2.THRESH_BINARY)
+
         # Найдём внешние контуры (только один объект)
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -661,8 +667,13 @@ class SegmentWindow(QWidget):
                 self.objects_count[self.classes[cls_id]] += 1
 
                 # Рисуем полигон
-                cv2.polylines(self.objects[name]["mask"], [points], isClosed=True, color=self.classes_color[self.classes[cls_id]], thickness=2)
-                cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
+                # cv2.polylines(self.objects[name]["mask"], [points], isClosed=True, color=self.classes_color[self.classes[cls_id]], thickness=cv2.FILLED)
+                # cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
+
+                cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])
+
+                # self.objects[name]["mask"] = cv2.GaussianBlur(self.objects[name]["mask"], (5, 5), 0)
+                # _, self.objects[name]["mask"] = cv2.threshold(self.objects[name]["mask"], 127, 255, cv2.THRESH_BINARY)
 
                 self.objects_list.addItem(name)
 

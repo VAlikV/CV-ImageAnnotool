@@ -10,11 +10,12 @@ class SegmentWindow(QWidget):
     def __init__(self, image_height = 900, image_width = 1600):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue_connector", "Terminal"]
+        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue-connector", "Terminal"]
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
         self.file_list = []
+        self.file_name = "!"
 
         colors = [(0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255), (255, 125, 0)]
         # self.colors = np.random.uniform(0, 256, (len(self.classes),3))
@@ -280,7 +281,8 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def setDrawSize(self):
-        self.draw_size = int(self.draw_size_edit.text())
+        if self.draw_size_edit.text() != "":
+            self.draw_size = int(self.draw_size_edit.text())
 
 # -------------------------------------------------------------------------
 # Обработка колесика мыши и нажатия левой кнопки мыши 
@@ -631,54 +633,55 @@ class SegmentWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def openLabel(self):
-        with open("output/" + self.file_name[0:-4] + ".txt", "r") as f:
-            self.zoom = 1
-            self.x_offset, self.y_offset = 0, 0
+        if (self.file_name[0:-4] + ".txt") in os.listdir("output/"):
+            with open("output/" + self.file_name[0:-4] + ".txt", "r") as f:
+                self.zoom = 1
+                self.x_offset, self.y_offset = 0, 0
 
-            self.objects_count = {}
-            for c in self.classes:
-                self.objects_count[c] = 0
+                self.objects_count = {}
+                for c in self.classes:
+                    self.objects_count[c] = 0
 
-            self.objects = {}
-            self.current_object = {}
+                self.objects = {}
+                self.current_object = {}
 
-            self.points = []
-            self.labels = []
+                self.points = []
+                self.labels = []
 
-            self.objects_list.clear()
+                self.objects_list.clear()
 
-            lines = f.readlines()
+                lines = f.readlines()
 
-            h, w = self.source_image.shape[:2]
+                h, w = self.source_image.shape[:2]
 
-            # Перебираем все аннотированные объекты
-            for line in lines:
-                parts = line.strip().split()
-                cls_id = int(parts[0])
-                coords = list(map(float, parts[1:]))
-                points = np.array([
-                    [int(float(coords[i]) * w), int(float(coords[i+1]) * h)]
-                    for i in range(0, len(coords), 2)
-                ])
-                
-                name = self.classes[cls_id]+"_"+str(self.objects_count[self.classes[cls_id]])
-                self.objects[name] = {}
-                self.objects[name]["mask"] = np.zeros(self.source_image.shape, dtype=np.uint8)  # shape: (H, W, 3)
-                self.objects_count[self.classes[cls_id]] += 1
+                # Перебираем все аннотированные объекты
+                for line in lines:
+                    parts = line.strip().split()
+                    cls_id = int(parts[0])
+                    coords = list(map(float, parts[1:]))
+                    points = np.array([
+                        [int(float(coords[i]) * w), int(float(coords[i+1]) * h)]
+                        for i in range(0, len(coords), 2)
+                    ])
+                    
+                    name = self.classes[cls_id]+"_"+str(self.objects_count[self.classes[cls_id]])
+                    self.objects[name] = {}
+                    self.objects[name]["mask"] = np.zeros(self.source_image.shape, dtype=np.uint8)  # shape: (H, W, 3)
+                    self.objects_count[self.classes[cls_id]] += 1
 
-                # Рисуем полигон
-                # cv2.polylines(self.objects[name]["mask"], [points], isClosed=True, color=self.classes_color[self.classes[cls_id]], thickness=cv2.FILLED)
-                # cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
+                    # Рисуем полигон
+                    # cv2.polylines(self.objects[name]["mask"], [points], isClosed=True, color=self.classes_color[self.classes[cls_id]], thickness=cv2.FILLED)
+                    # cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])  # заливаем полигон полупрозрачным
 
-                cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])
+                    cv2.fillPoly(self.objects[name]["mask"], [points], color=self.classes_color[self.classes[cls_id]])
 
-                # self.objects[name]["mask"] = cv2.GaussianBlur(self.objects[name]["mask"], (5, 5), 0)
-                # _, self.objects[name]["mask"] = cv2.threshold(self.objects[name]["mask"], 127, 255, cv2.THRESH_BINARY)
+                    # self.objects[name]["mask"] = cv2.GaussianBlur(self.objects[name]["mask"], (5, 5), 0)
+                    # _, self.objects[name]["mask"] = cv2.threshold(self.objects[name]["mask"], 127, 255, cv2.THRESH_BINARY)
 
-                self.objects_list.addItem(name)
+                    self.objects_list.addItem(name)
 
-            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
-            self.printMasks()
+                self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+                self.printMasks()
 
 # -------------------------------------------------------------------------
 # Авторазметка

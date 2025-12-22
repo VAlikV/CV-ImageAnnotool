@@ -81,6 +81,7 @@ TODO:
 
 ## Использование
 
-1. В директории Daraset_preparation создать `input`, `output`. В `input` загружаются картинки для разметки. В `output` сохраняются лейблы.
+[Docs](docs/README.md)
 
-2. ....
+
+

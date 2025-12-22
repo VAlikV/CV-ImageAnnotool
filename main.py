@@ -12,9 +12,9 @@ if __name__ == "__main__":
     if dialog.exec_() == QDialog.Accepted:
         selected = dialog.selected_option
         if selected == 0:
-            window = SegmentWindow(image_height = 928, image_width = 1600)
+            window = SegmentWindow(image_height = 928, image_width = 1600, classes=["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue-connector", "Terminal"])
         elif selected == 1:
-            window = DetectionWindow(image_height = 180, image_width = 320)
+            window = DetectionWindow(image_height = 180, image_width = 320, classes=["PCB"])
         elif selected == 2:
             window = DirectionWindow()
         window.show()

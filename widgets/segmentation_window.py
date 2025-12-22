@@ -7,10 +7,10 @@ import numpy as np
 from ultralytics import YOLO
 
 class SegmentWindow(QWidget):
-    def __init__(self, image_height = 900, image_width = 1600):
+    def __init__(self, image_height = 900, image_width = 1600, classes = ["Human"]):
         super().__init__()
 
-        self.classes = ["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue-connector", "Terminal"]
+        self.classes = classes
         self.current_class = self.classes[0]
         self.current_object_name = self.classes[0] + "_0"
         self.current_file_index = -1
@@ -22,7 +22,7 @@ class SegmentWindow(QWidget):
 
         self.classes_color = {}
         for i, c in enumerate(self.classes):
-            self.classes_color[c] = colors[i]
+            self.classes_color[c] = colors[i % len(colors)]
         
         self.color = self.classes_color[self.current_class]
 
@@ -174,7 +174,7 @@ class SegmentWindow(QWidget):
         self.objects_list.currentItemChanged.connect(self.selectObject)
 
         self.open_button.clicked.connect(self.openLabel)
-        self.auto_button.clicked.connect(self.autoSegmentation)
+        # self.auto_button.clicked.connect(self.autoSegmentation)
 
 # -------------------------------------------------------------------------
 # Обновление списка файлов 

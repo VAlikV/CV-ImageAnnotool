@@ -7,10 +7,10 @@
 Доступно: 
 - Разметка для **YOLO-seg** при помощи **sam2**
 - Разметка направлений
+- Разметка для детектирования
 
 TODO:
-- Добавить детектирование
-- Более удобный интерфейс
+- Более удобный интерфейс, меньше работы с исходным кодом
 
 ## Зависимости
 
@@ -40,7 +40,9 @@ TODO:
     1.1. На Windows во время активации может возникнуть ошибка. Выполнить:
 
     ```bash
-    Set-ExecutionPolicy Unrestricted -Scope Process
+    Set-ExecutionPolicy Unrestricted -Scope Process # Разрешение в текущем терминале
+
+    Set-ExecutionPolicy Unrestricted -Scope LocalMachine # Всегда
     ```
 
 2. Установить зависимости через **pip**    
@@ -81,4 +83,4 @@ TODO:
 
 1. В директории Daraset_preparation создать `input`, `output`. В `input` загружаются картинки для разметки. В `output` сохраняются лейблы.
 
-2. 
+2. ....

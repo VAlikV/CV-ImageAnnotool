@@ -12,9 +12,24 @@ if __name__ == "__main__":
     if dialog.exec_() == QDialog.Accepted:
         selected = dialog.selected_option
         if selected == 0:
-            window = SegmentWindow(image_height = 928, image_width = 1600, classes=["Connector", "Capacitor", "Led", "Relay", "Coil", "Varistor", "Blue-connector", "Terminal"])
+            window = SegmentWindow(image_height = 928, image_width = 1600, classes=["Connector", 
+                                                                                    "Capacitor", 
+                                                                                    "Led", 
+                                                                                    "Relay",
+                                                                                    "Coil", 
+                                                                                    "Varistor", 
+                                                                                    "Blue-connector", 
+                                                                                    "Terminal", 
+                                                                                    "Red-switch",
+                                                                                    "Battery",
+                                                                                    "Buzzer",
+                                                                                    "Antenna",
+                                                                                    "Dcdc",
+                                                                                    "EndCap",
+                                                                                    "Plug",
+                                                                                    "Buttons"])
         elif selected == 1:
-            window = DetectionWindow(image_height = 180, image_width = 320, classes=["PCB"])
+            window = DetectionWindow(image_height = 480, image_width = 640, classes=["PCB"])
         elif selected == 2:
             window = DirectionWindow()
         window.show()

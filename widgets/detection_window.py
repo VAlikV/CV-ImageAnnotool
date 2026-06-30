@@ -528,46 +528,47 @@ class DetectionWindow(QWidget):
 # -------------------------------------------------------------------------
 
     def openLabel(self):
-        with open("output/" + self.file_name[0:-4] + ".txt", "r") as f:
-            self.zoom = 1
-            self.x_offset, self.y_offset = 0, 0
+        if (self.file_name[0:-4] + ".txt") in os.listdir("output/"):
+            with open("output/" + self.file_name[0:-4] + ".txt", "r") as f:
+                self.zoom = 1
+                self.x_offset, self.y_offset = 0, 0
 
-            self.objects_count = {}
-            for c in self.classes:
-                self.objects_count[c] = 0
+                self.objects_count = {}
+                for c in self.classes:
+                    self.objects_count[c] = 0
 
-            self.objects = {}
-            self.current_object = {}
+                self.objects = {}
+                self.current_object = {}
 
-            self.points = np.array([[0,0],[0,0]])
+                self.points = np.array([[0,0],[0,0]])
 
-            self.objects_list.clear()
+                self.objects_list.clear()
 
-            lines = f.readlines()
+                lines = f.readlines()
 
-            h, w = self.source_image.shape[:2]
+                h, w = self.source_image.shape[:2]
 
-            # Перебираем все аннотированные объекты
-            for line in lines:
-                parts = line.strip().split()
-                cls_id = int(parts[0])
-                coords = list(map(float, parts[1:]))
-                xc = float(coords[0]) * w
-                yc = float(coords[1]) * h
-                width = float(coords[2]) * w
-                height = float(coords[3]) * h
+                # Перебираем все аннотированные объекты
+                for line in lines:
+                    parts = line.strip().split()
+                    cls_id = int(parts[0])
+                    coords = list(map(float, parts[1:]))
+                    xc = float(coords[0]) * w
+                    yc = float(coords[1]) * h
+                    width = float(coords[2]) * w
+                    height = float(coords[3]) * h
 
-                points = np.array([[int(xc-width/2), int(yc-height/2)],[int(xc+width/2), int(yc+height/2)]])
-                
-                name = self.classes[cls_id]+"_"+str(self.objects_count[self.classes[cls_id]])
-                self.objects[name] = {}
-                self.objects[name]["box"] = points
-                self.objects_count[self.classes[cls_id]] += 1
+                    points = np.array([[int(xc-width/2), int(yc-height/2)],[int(xc+width/2), int(yc+height/2)]])
+                    
+                    name = self.classes[cls_id]+"_"+str(self.objects_count[self.classes[cls_id]])
+                    self.objects[name] = {}
+                    self.objects[name]["box"] = points
+                    self.objects_count[self.classes[cls_id]] += 1
 
-                self.objects_list.addItem(name)
+                    self.objects_list.addItem(name)
 
-            self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
-            self.printBox()
+                self.current_object_name = self.current_class + "_" + str(self.objects_count[self.current_class])
+                self.printBox()
 
 # -------------------------------------------------------------------------
 # Auto
